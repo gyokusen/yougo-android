@@ -62,6 +62,9 @@ main{flex:1; min-height:0; position:relative}
    DOM の並びが list,view,edit,master,io なので、あとに来る edit/master/io より
    前に出すために z-index が要る。 */
 #pg-view.on{z-index:5; background:var(--bg)}
+/* ②編集の上のバーは画面の上端に貼り付ける（v1.1.0）。本文や注意まで
+   スクロールした先でも［日付+時刻］を押せるようにするため。 */
+#pg-edit .bar{position:sticky; top:0; z-index:4; background:var(--bg)}
 
 /* ---- 下タブ（4つ） ---- */
 nav.tabs{display:flex; background:var(--panel); border-top:1px solid var(--line); flex:none;
@@ -278,6 +281,8 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
 <div class="page" id="pg-edit">
   <div class="bar">
     <span class="f" id="edPos">－</span>
+    <button class="btn sm" id="bStampA" title="2026/09/20 21:58:00">日付+時刻</button>
+    <button class="btn sm" id="bStampB" title="2026年09月20日(日) 21:58">日付+曜日+時刻</button>
     <span class="sp"></span>
     <span class="dirty" id="edDirty" hidden>● 保存していません</span>
   </div>
@@ -426,7 +431,7 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
 
 <script>
 "use strict";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 /* ★ IndexedDB は gyokusen.github.io という**オリジン単位**で分かれ、
      URL の下の階層（/yougo-android/）では分かれない。
      同じ github.io に置く別アプリとは必ず別の名前にすること。
@@ -455,6 +460,32 @@ function fmtDT(d){ return fmtD(d)+" "+pad2(d.getHours())+":"+pad2(d.getMinutes()
                         +":"+pad2(d.getSeconds()); }
 function fmtHM(d){ return pad2(d.getHours())+":"+pad2(d.getMinutes()); }
 function today(){ return fmtD(nowDT()); }
+/* 欄に入れる日時の書きかた（v1.1.0）。PC版の Ctrl+］／Alt+］と同じ字面にそろえる。
+     stampDT  2026/09/20 21:58:00
+     stampJa  2026年09月20日(日) 21:58
+   登録日が自動で入れる today() の「2026-09-20」とは区切りが違うが、
+   PC版と同じ見た目を優先した。 */
+const WD = ["日","月","火","水","木","金","土"];
+function stampDT(d){ d = d || new Date();
+  return d.getFullYear()+"/"+pad2(d.getMonth()+1)+"/"+pad2(d.getDate())
+       +" "+pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds()); }
+function stampJa(d){ d = d || new Date();
+  return d.getFullYear()+"年"+pad2(d.getMonth()+1)+"月"+pad2(d.getDate())+"日("
+       +WD[d.getDay()]+") "+pad2(d.getHours())+":"+pad2(d.getMinutes()); }
+/* 入れる先は「いま触っている欄」。ボタンを押した拍子に欄から離れる端末のために、
+   直前に触っていた欄（ED_LAST）も覚えておく。隠れている欄には入れない。 */
+const ED_FLDS = ["edTitle","edF3","edF4","edF5","edBody","edF7","edF8"];
+let ED_LAST = null;
+function stampInto(fn){
+  const a = document.activeElement;
+  const el = (a && ED_FLDS.indexOf(a.id) >= 0) ? a : ED_LAST;
+  if(!el || el.offsetParent === null){
+    toast("先に、入れたい欄をタップしてください"); return false;
+  }
+  if(!insertAt(el, fn(new Date()))) return false;
+  el.focus();
+  return true;
+}
 function now(){ return fmtDT(nowDT()); }
 function parseDT(s){
   const m = String(s||"").match(/^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)/);
@@ -1439,6 +1470,22 @@ async function boot(){
     setDirty(true); e.focus();
     toast("雛形「" + t.name + "」を入れました");
   };
+  /* 日付・時刻のボタン（v1.1.0）。PC版はキーボードの Ctrl+］／Alt+］で入れられるが、
+     スマホには Ctrl／Alt が無いのでボタンにした。入れる先は「いま触っている欄」。
+     ボタンを押すと指が欄から離れてしまうので、pointerdown を止めて
+     フォーカスを逃がさないようにし、それでも外れる端末のために
+     ED_LAST（直前に触っていた欄）も覚えておく。 */
+  ED_FLDS.forEach(id => {
+    const e = $(id);
+    if(e) e.addEventListener("focus", () => { ED_LAST = e; });
+  });
+  [["bStampA", stampDT], ["bStampB", stampJa]].forEach(pair => {
+    const b = $(pair[0]);
+    b.addEventListener("pointerdown", e => e.preventDefault());
+    b.addEventListener("mousedown",   e => e.preventDefault());
+    b.onclick = () => stampInto(pair[1]);
+  });
+
   /* 画像。スマホでは貼り付けが使いにくいので、ファイル（写真）を選ぶ道を主にする。
      PC のブラウザで開いたときのために、本文の貼り付けも受ける。 */
   $("bImg").onclick = () => { $("imgPick").value = ""; $("imgPick").click(); };
