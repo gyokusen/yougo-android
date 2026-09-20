@@ -1,0 +1,15 @@
+# ★ 用語辞書の中身は業務の知識なので、置き場（public な GitHub Pages）には上げない。
+#    上げるのはアプリだけ： index.html / manifest.webmanifest / sw.js / icon/*.png
+#    この決めごとは GitHubPagesへの置き方.md に書いてある。ここを緩めないこと。
+
+# データ（控えJSON・CSV）
+*.json
+*.csv
+_dl/
+
+# 置き場に要らないもの（手元にだけ置く）
+*.md
+uitest_*.py
+make_icon.py
+__pycache__/
+*.bak_*
