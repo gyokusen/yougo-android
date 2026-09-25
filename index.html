@@ -189,6 +189,22 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
 .kv{font-size:12.5px; color:var(--sub); line-height:1.9; word-break:break-word}
 .kv b{color:var(--ink)}
 
+/* ---- ⑤パスワード（v1.2.0。PC版 v1.8.0 の⑥パスワードと同じ暗号・同じ受け渡し） ---- */
+.pw-mask{font-family:ui-monospace,Consolas,monospace; letter-spacing:1px; word-break:break-all}
+.pw-mask.shown{color:var(--err); letter-spacing:0; user-select:all; -webkit-user-select:all}
+.pw-lock{font-size:12px; color:var(--sub); border:1px solid var(--line2); border-radius:12px;
+         padding:3px 9px; background:#fff; white-space:nowrap}
+.pw-lock.open{color:var(--ok); border-color:#CBE0D1}
+.pw-line{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:6px}
+.pw-line .sp{flex:1}
+.pw-in{display:flex; gap:6px; align-items:center}
+.pw-in input{flex:1; min-width:0}
+.pw-hist{margin-top:14px}
+.pw-hist .hrow{border-top:1px dashed var(--line2); padding:7px 0}
+.pw-hist .hat{font-size:11.5px; color:var(--sub)}
+.pw-nokey{margin:12px; padding:11px 12px; border-radius:9px; font-size:12.5px; line-height:1.8;
+          background:#FBF4E4; color:var(--warn); border:1px solid #E9DCB9}
+
 /* ---- 画面が広いとき ---- */
 @media (min-width:620px){
   body{background:#E7DFC9}
@@ -349,7 +365,8 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
     <div class="card2">
       <h3>控え JSON を取り込む（PC版から受け取る）</h3>
       <p>PC版の［④入出力］→［JSON へ書き出す］で作った控えを読みます。
-         <b>本文に貼った画像もいっしょに入ります。</b></p>
+         <b>本文に貼った画像もいっしょに入ります。</b>
+         ⑤パスワードは入れ替えずに<b>合わせます</b>（PC版と同じ）。</p>
       <div class="acts">
         <button class="btn" id="bPickJson">ファイルを選ぶ</button>
         <span class="sp"></span>
@@ -367,12 +384,26 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
 
     <div class="card2">
       <h3>控え JSON を書き出す（PC版へ返す・控えを取る）</h3>
-      <p>いまの中身を1本の JSON にします。画像も入ります。
+      <p>いまの中身を1本の JSON にします。画像も、⑤パスワード（暗号文のまま）も入ります。
          PC版の［取り込む］で読めます。</p>
       <div class="acts">
         <span class="sp"></span>
         <button class="btn primary" id="bExpJson">書き出す</button>
       </div>
+    </div>
+
+    <div class="card2">
+      <h3>パスワードだけ（PC版と合わせる）</h3>
+      <p>⑤パスワードだけを<b>暗号文のまま</b>出し入れします。事項・画像には触りません。
+         <b>合わせる</b>は入れ替えではなく、同じ1件どうしは<b>新しく直したほう</b>を残し、
+         どちらかで消したものは両方で消えます。PC版の［パスワードだけ書き出す］で作った JSON も、
+         事項入りの控え JSON も選べます。</p>
+      <div class="acts">
+        <button class="btn" id="bPwImp">パスワードを合わせる</button>
+        <span class="sp"></span>
+        <button class="btn primary" id="bPwExp">パスワードだけ書き出す</button>
+      </div>
+      <div id="pwIoMsgs" style="margin-top:9px"></div>
     </div>
 
     <div class="card2">
@@ -398,6 +429,27 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
     </div>
   </div>
 </div>
+
+<!-- ======================= ⑤パスワード（v1.2.0） ======================= -->
+<div class="page" id="pg-pw">
+  <div class="bar">
+    <input type="text" id="pwQ" placeholder="見出し・ユーザ名・サイト・メモで探す">
+  </div>
+  <div class="bar">
+    <span class="pw-lock" id="pwLockState">🔒 鍵がかかっています</span>
+    <button class="btn sm" id="bPwLock" disabled>鍵をかける</button>
+    <span class="sp"></span>
+    <span class="f" id="pwCount">0 件</span>
+    <button class="btn sm" id="bPwNew">＋ 新しく登録</button>
+  </div>
+  <div class="pw-nokey" id="pwNoKey" hidden>
+    この端末にはまだ<b>鍵がありません</b>。マスターパスワードはスマホでは決めません。<br>
+    PC版の［④入出力］→［パスワードだけ書き出す］で作った JSON（または控え JSON）を、
+    ここの［④入出力］→［パスワードを合わせる］で取り込むと、鍵とパスワードを受け取れます。
+  </div>
+  <div class="rows" id="pwRows"></div>
+  <div class="empty" id="pwEmpty" hidden></div>
+</div>
 </main>
 
 <div id="upd">
@@ -416,6 +468,7 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
   <button data-page="edit"><span class="ic">②</span>編集</button>
   <button data-page="master"><span class="ic">③</span>マスタ</button>
   <button data-page="io"><span class="ic">④</span>入出力</button>
+  <button data-page="pw"><span class="ic">⑤</span>パスワード</button>
 </nav>
 
 <div class="mask" id="mDlg"><div class="dlg">
@@ -424,19 +477,74 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
   <div class="foot" id="dlgFoot"></div>
 </div></div>
 
+<!-- ⑤パスワードの1件（v1.2.0） -->
+<div class="mask" id="mPw"><div class="dlg">
+  <h2><span id="pwTitleH">パスワードを登録</span><button class="x" id="pwX">✕</button></h2>
+  <div class="body">
+    <div class="form">
+      <div><label class="k" for="pwTitle">見出し</label><input id="pwTitle" autocomplete="off"></div>
+      <div><label class="k" for="pwAcc">ユーザ名</label>
+        <div class="pw-in"><input id="pwAcc" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button class="btn sm" id="pwAccCopy" type="button">コピー</button></div></div>
+      <div><label class="k" for="pwSite">サイト</label>
+        <input id="pwSite" autocomplete="off" autocapitalize="off" spellcheck="false"
+               placeholder="https://… や、PC の名前など"></div>
+      <div><label class="k" for="pwPass" id="pwPassLab">パスワード</label>
+        <div class="pw-in"><input id="pwPass" type="password" autocomplete="new-password"
+               autocapitalize="off" spellcheck="false">
+          <button class="btn sm" id="pwPassEye" type="button">見る</button></div>
+        <div class="hint">しまうときはマスターパスワードを聞きません（見るときだけ聞きます）。</div></div>
+      <div id="pwNowRow"><label class="k">いまのパスワード</label>
+        <div class="pw-line"><span class="pw-mask" id="pwNow">●●●●●●●●</span><span class="sp"></span>
+          <button class="btn sm" id="pwNowShow" type="button">表示</button>
+          <button class="btn sm" id="pwNowCopy" type="button">コピー</button></div>
+        <div class="hint" id="pwUpd"></div></div>
+      <div><label class="k" for="pwMemo">メモ</label><textarea id="pwMemo" rows="3"></textarea></div>
+    </div>
+    <div class="pw-hist" id="pwHistBox" hidden>
+      <div class="sec">パスワードの履歴（新しい順）</div>
+      <div id="pwHist"></div>
+    </div>
+    <div id="pwMsgs" style="margin-top:9px"></div>
+  </div>
+  <div class="foot">
+    <button class="btn danger" id="pwDelOne" style="margin-right:auto">削除</button>
+    <button class="btn" id="pwCancel">やめる</button>
+    <button class="btn primary" id="pwSave">保存</button>
+  </div>
+</div></div>
+
+<!-- マスターパスワードを聞く窓（開けるだけ。スマホでは決めない・変えない） -->
+<div class="mask" id="mPwKey"><div class="dlg">
+  <h2>マスターパスワード</h2>
+  <div class="body">
+    <p class="hint" id="pkLead" style="margin-top:0"></p>
+    <div class="form"><div>
+      <input id="pkCur" type="password" autocomplete="current-password" autocapitalize="off"
+             spellcheck="false" placeholder="PC版で決めたマスターパスワード">
+    </div></div>
+    <div id="pkMsgs" style="margin-top:9px"></div>
+  </div>
+  <div class="foot">
+    <button class="btn" id="pkCancel">やめる</button>
+    <button class="btn primary" id="pkOk">開ける</button>
+  </div>
+</div></div>
+
 <div id="toast"></div>
 <div id="busy"><div class="spin"></div><div id="busyText">処理しています…</div></div>
 <input type="file" id="filePick" accept=".json,.csv,text/csv,application/json" style="display:none">
+<input type="file" id="pwPick" accept=".json,application/json" style="display:none">
 <input type="file" id="imgPick" accept="image/*" multiple style="display:none">
 
 <script>
 "use strict";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 /* ★ IndexedDB は gyokusen.github.io という**オリジン単位**で分かれ、
      URL の下の階層（/yougo-android/）では分かれない。
      同じ github.io に置く別アプリとは必ず別の名前にすること。
      既に使っている名前： eigo_app（英単語・例文暗記）／ work_time（作業時間管理） */
-const DB_NAME = "yougo_app", DB_VER = 1;
+const DB_NAME = "yougo_app", DB_VER = 2;   // 2 … ⑤パスワード（v1.2.0）
 
 /* 事項の欄は固定8つ（見出し語 ＋ f3〜f8）。呼び名だけがジャンルごとに変わる。
    f5＝分類／f6＝本文／f7＝注意／f8＝参照 は、どのジャンルでも役割が同じ。 */
@@ -447,7 +555,7 @@ const CSV_KEYS = ["reg_no","genre","title","f3","f4","f5","f6",
                   "f7","f8","created_at","updated_at"];
 const DEF_LABELS = {label3:"説明", label4:"登録日", label5:"分類",
                     label6:"本文", label7:"注意", label8:"参照URL"};
-const DEF_CFG = {list_chunk:300, body_head:120, image_max_px:1200, reg_no_prefix:"Y"};
+const DEF_CFG = {list_chunk:300, body_head:120, image_max_px:1200, reg_no_prefix:"Y", pw_lock_min:10};
 let CFG = Object.assign({}, DEF_CFG);
 let db = null;
 
@@ -530,6 +638,14 @@ function openDB(){
       if(!d.objectStoreNames.contains("images"))
         d.createObjectStore("images", {keyPath:"id"});
       if(!d.objectStoreNames.contains("meta")) d.createObjectStore("meta", {keyPath:"k"});
+      /* ⑤パスワード（v1.2.0）。PC とスマホで同じ1件を見分けるため uid を鍵にする。
+         消したものも「消した印」（deleted=1）で残す。履歴は親を pw_uid で指す。 */
+      if(!d.objectStoreNames.contains("passwords"))
+        d.createObjectStore("passwords", {keyPath:"uid"});
+      if(!d.objectStoreNames.contains("pw_history")){
+        const h = d.createObjectStore("pw_history", {keyPath:"uid"});
+        h.createIndex("pw_uid", "pw_uid");
+      }
     };
     rq.onsuccess = () => { db = rq.result; res(db); };
     rq.onerror = () => rej(rq.error);
@@ -723,7 +839,8 @@ function tab(name, quiet){
     b.classList.toggle("on", b.dataset.page === name
       || (name === "view" && b.dataset.page === "list")));
   if(name === "master" && !quiet) drawMaster();
-  if(name === "io" && !quiet) drawIoStat();
+  if(name === "io" && !quiet) drawIoStatPw();
+  if(name === "pw" && !quiet) loadPw();
   const p = $("pg-" + name); if(p) p.scrollTop = p.scrollTop;
 }
 
@@ -1146,6 +1263,7 @@ function holdJson(name, text){
   JSONDOC = doc; JSONNAME = name;
   $("jsonPicked").textContent = name + "　事項 " + num((doc.entries||[]).length)
     + " 件／画像 " + num((doc.images||[]).length) + " 枚"
+    + (doc.passwords ? "／パスワード " + num(doc.passwords.filter(r => !parseInt(r.deleted,10)).length) + " 件" : "")
     + (doc.exported_at ? "　（" + doc.exported_at + " に書き出し）" : "");
   $("jsonMsgs").innerHTML = "";
 }
@@ -1162,7 +1280,7 @@ async function importJson(){
   }
   const doc = JSONDOC;
   busy(true, "取り込んでいます…");
-  let nimg = 0;
+  let nimg = 0, PM = null;
   try {
     await clearStore("images"); await clearStore("entries");
     await clearStore("templates"); await clearStore("genres");
@@ -1179,6 +1297,8 @@ async function importJson(){
                    b64:im.b64, created_at:now()}));
     await putMany("images", imgs);
     nimg = imgs.length;
+    /* ⑤パスワードは入れ替えずに合わせる（PC版 v1.8.0 と同じ）。入っていない控えなら何もしない */
+    PM = await pwMerge(doc);
     await reloadAll();
     await sweepImages();
   } catch(e){
@@ -1189,7 +1309,8 @@ async function importJson(){
   busy(false);
   $("jsonOk").checked = false;
   $("jsonMsgs").innerHTML = msgHtml(
-    "入れ替えました（事項 " + num(ENTRIES.length) + " 件／画像 " + num(nimg) + " 枚）", "ok");
+    "入れ替えました（事項 " + num(ENTRIES.length) + " 件／画像 " + num(nimg) + " 枚）", "ok")
+    + (PM && PM.keys !== "none" ? msgHtml(PM.message, PM.ok ? "ok" : "warn") : "");
   loadList(); newEdit(true); drawIoStat();
   toast("入れ替えました（事項 " + num(ENTRIES.length) + " 件）", 3500);
 }
@@ -1210,6 +1331,7 @@ async function exportJson(){
     doc = buildJson();
     const imgs = await getAll("images");
     doc.images = imgs.map(im => ({id:im.id, name:im.name, mime:im.mime, b64:im.b64}));
+    Object.assign(doc, await pwDoc());     // ⑤パスワード（暗号文のまま。v1.2.0）
   } finally { busy(false); }
   download("用語辞書_控え_" + stamp() + ".json", JSON.stringify(doc), "application/json");
   lastBackup = now();
@@ -1295,28 +1417,33 @@ async function importCsvText(name, text, enc){
 }
 
 /* --- 記録の状態 --- */
+async function drawIoStatPw(){ await pwLoadKeys(); await pwReload(); drawIoStat(); }
 function drawIoStat(){
   const per = {};
   ENTRIES.forEach(e => { per[e.genre] = (per[e.genre]||0) + 1; });
   const lines = Object.keys(per).sort().map(g => esc(g) + " " + num(per[g])).join("　");
   $("ioStat").innerHTML =
     "事項：<b>" + num(ENTRIES.length) + "</b> 件　ジャンル：<b>" + num(GENRES.length)
-    + "</b>　雛形：<b>" + num(TMPLS.length) + "</b>　画像：<b>" + num(IMGCOUNT) + "</b> 枚<br>"
+    + "</b>　雛形：<b>" + num(TMPLS.length) + "</b>　画像：<b>" + num(IMGCOUNT) + "</b> 枚"
+    + "　パスワード：<b>" + num(PW_ALL.filter(r => !r.deleted).length) + "</b> 件"
+    + (pwHasKey() ? "（鍵あり）" : "（鍵なし）") + "<br>"
     + (lines ? lines + "<br>" : "")
     + backupText() + "<br>" + persistText();
 }
 async function wipeAll(){
-  if(!confirm("事項・ジャンル定義・雛形・画像を、この端末から全部消します。\n"
+  if(!confirm("事項・ジャンル定義・雛形・画像・パスワード（鍵も）を、この端末から全部消します。\n"
             + "よろしいですか。（PC版のデータは消えません）")) return;
   if(!confirm("本当に消してよいですか。元に戻せません。")) return;
   busy(true, "消しています…");
   try {
     await clearStore("entries"); await clearStore("genres");
     await clearStore("templates"); await clearStore("images");
+    await clearStore("passwords"); await clearStore("pw_history");
+    await delRec("meta", "pw_keys"); pwLock(true); PW_ST = null;
     Object.keys(IMGCACHE).forEach(k => { delete IMGCACHE[k]; });
     await reloadAll();
   } finally { busy(false); }
-  loadList(); newEdit(true); drawIoStat();
+  loadList(); newEdit(true); await drawIoStatPw();
   toast("全部消しました");
 }
 
@@ -1354,7 +1481,7 @@ function checkBackup(){
   if(bkHidden) return;
   if($("upd").classList.contains("on")) return;
   /* 取り込んだだけの人には催促しない。こちらで書いた（更新した）人にだけ出す */
-  if(!ENTRIES.some(e => e.updated_at && e.updated_at > (lastBackup || ""))) return;
+  if(!ENTRIES.concat(PW_ALL).some(e => e.updated_at && e.updated_at > (lastBackup || ""))) return;
   const n = lastBackup ? daysSince(lastBackup) : null;
   if(n !== null && n < BACKUP_DAYS) return;
   $("bkText").textContent = lastBackup
@@ -1390,6 +1517,402 @@ async function doUpdate(){
   location.reload();
 }
 
+/* ---------------- ⑤パスワード（v1.2.0） ----------------
+   PC版 v1.8.0 の⑥パスワードと**同じ暗号・同じ受け渡し**。暗号のところは PC版 yougo.html から
+   そのまま移した（書き換えると PC とスマホで開けなくなるので、直すときは両方そろえること）。
+     ・鍵は ECDH P-256 の対。しまう＝公開鍵だけで暗号化（マスターパスワードを聞かない）
+     ・見る＝秘密鍵が要る。秘密鍵は PBKDF2（60万回）で作った AES 鍵で包んである
+     ・1件の暗号文 = 'e1:' + base64( 使い捨て公開鍵65 ＋ iv12 ＋ 暗号本体 )
+   スマホではマスターパスワードを**決めない・変えない**。PC の控えを［合わせる］で取り込んで
+   鍵（pw_keys）を受け取る。鍵は meta の "pw_keys" に置く。
+   受け渡しの形と規則は PC版 pw_doc／pw_merge と同じ（uid・deleted・updated_at の新しいほう・
+   履歴は uid で足し合わせ・pw_key_at）。 */
+const PWC = {iter:600000};
+const PW_FIELDS = ["title","account","site","pw_enc","memo","pw_updated"];
+const PW_KEYS = ["pw_salt","pw_iter","pw_pub","pw_priv"];
+let PW_ST = null;        // {pw_salt, pw_iter, pw_pub, pw_priv, pw_key_at} か null
+let PW_PRIV = null;      // 開いている間だけ持つ秘密鍵（CryptoKey。取り出し不可）
+let PW_UNTIL = 0;
+let PW_ALL = [], PW_ROWS = [], PW_CUR = null, PW_HIST = [], PK_WAIT = null;
+const TE = new TextEncoder(), TD = new TextDecoder();
+function b64e(u8){ let s = ""; for(let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
+function b64d(s){ return Uint8Array.from(atob(String(s||"")), c => c.charCodeAt(0)); }
+const ECDH = {name:"ECDH", namedCurve:"P-256"};
+/* PC版の uuid4().hex と同じ形（32桁の16進） */
+function newUid(){
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+  return Array.from(b, x => (x < 16 ? "0" : "") + x.toString(16)).join("");
+}
+
+async function pwWrapKey(pass, saltB64, iter){
+  const base = await crypto.subtle.importKey("raw", TE.encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt:b64d(saltB64), iterations:iter, hash:"SHA-256"},
+    base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+}
+async function aesEnc(key, bytes){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, bytes));
+  const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return o;
+}
+async function aesDec(key, u8){
+  return new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM", iv:u8.slice(0,12)}, key, u8.slice(12)));
+}
+async function pwOpenPriv(pass, st){
+  const wk = await pwWrapKey(pass, st.pw_salt, parseInt(st.pw_iter,10) || PWC.iter);
+  const raw = await aesDec(wk, b64d(st.pw_priv));      // 違うマスターパスワードならここで失敗する
+  return crypto.subtle.importKey("pkcs8", raw, ECDH, false, ["deriveKey"]);
+}
+async function pwShared(priv, pub){
+  return crypto.subtle.deriveKey({name:"ECDH", public:pub}, priv,
+    {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+}
+async function pwEncrypt(text){
+  const pub = await crypto.subtle.importKey("raw", b64d(PW_ST.pw_pub), ECDH, false, []);
+  const eph = await crypto.subtle.generateKey(ECDH, false, ["deriveKey"]);
+  const k = await pwShared(eph.privateKey, pub);
+  const epub = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
+  const body = await aesEnc(k, TE.encode(text));
+  const o = new Uint8Array(epub.length + body.length); o.set(epub); o.set(body, epub.length);
+  return "e1:" + b64e(o);
+}
+async function pwDecrypt(priv, enc){
+  if(!enc) return "";
+  const u = b64d(String(enc).replace(/^e1:/, ""));
+  const epub = await crypto.subtle.importKey("raw", u.slice(0,65), ECDH, false, []);
+  return TD.decode(await aesDec(await pwShared(priv, epub), u.slice(65)));
+}
+
+/* 覚えておく分数（⚙。PC版の ini pw_lock_min と同じ意味）。0 なら見るたびに聞く */
+function pwMin(){ const n = parseInt(CFG.pw_lock_min, 10); return isNaN(n) ? 10 : Math.max(0, n); }
+function pwHasKey(){ return !!(PW_ST && PW_ST.pw_pub && PW_ST.pw_priv); }
+function pwLockSay(){
+  const e = $("pwLockState"); if(!e) return;
+  const open = !!PW_PRIV;
+  e.classList.toggle("open", open);
+  e.textContent = open ? "🔓 開いています（あと " + Math.max(1, Math.ceil((PW_UNTIL - Date.now())/60000)) + " 分）"
+                       : (pwHasKey() ? "🔒 鍵がかかっています" : "🔑 鍵がありません");
+  $("bPwLock").disabled = !open;
+}
+function pwMaskAll(){
+  document.querySelectorAll(".pw-mask.shown").forEach(m => {
+    m.textContent = "●●●●●●●●"; m.classList.remove("shown"); });
+  document.querySelectorAll("[data-pwshow],[data-hshow],#pwNowShow").forEach(b => b.textContent = "表示");
+}
+function pwLock(quiet){
+  PW_PRIV = null; PW_UNTIL = 0; pwMaskAll(); pwLockSay();
+  if(!quiet) toast("鍵をかけました");
+}
+
+async function pwLoadKeys(){ PW_ST = await getMeta("pw_keys", null); return PW_ST; }
+
+/* 見るための秘密鍵を用意する。覚えていればそのまま、無ければマスターパスワードを聞く */
+async function pwPriv(){
+  if(PW_PRIV && Date.now() <= PW_UNTIL){
+    if(pwMin() > 0) PW_UNTIL = Date.now() + pwMin()*60000;
+    return PW_PRIV;
+  }
+  PW_PRIV = null;
+  await pwLoadKeys();
+  if(!pwHasKey()){ toast("鍵がありません。PC版の控えを［パスワードを合わせる］で取り込んでください", 5000); return null; }
+  const ok = await pkAsk(); if(!ok) return null;
+  const k = PW_PRIV;
+  if(pwMin() === 0){ PW_PRIV = null; PW_UNTIL = 0; }
+  pwLockSay();
+  return k;
+}
+function pkAsk(){
+  if(PK_WAIT) PK_WAIT(false);
+  $("pkLead").innerHTML = "パスワードを見るには、PC版で決めたマスターパスワードを入れてください。"
+    + (pwMin() > 0 ? "<br>入れたあと " + pwMin() + " 分間は聞きません（⚙で変えられます）。" : "");
+  $("pkCur").value = ""; $("pkMsgs").innerHTML = "";
+  $("mPwKey").classList.add("on");
+  setTimeout(() => $("pkCur").focus(), 30);
+  return new Promise(res => { PK_WAIT = res; });
+}
+function pkClose(v){ $("mPwKey").classList.remove("on"); const w = PK_WAIT; PK_WAIT = null; if(w) w(v); }
+async function pkOk(){
+  const cur = $("pkCur").value;
+  if(!cur){ $("pkMsgs").innerHTML = msgHtml("マスターパスワードを入れてください"); return; }
+  $("pkOk").disabled = true; $("pkMsgs").innerHTML = msgHtml("確かめています…", "warn");
+  try {
+    try { PW_PRIV = await pwOpenPriv(cur, PW_ST); }
+    catch(e){ $("pkMsgs").innerHTML = msgHtml("マスターパスワードが違います"); return; }
+    PW_UNTIL = Date.now() + Math.max(pwMin(), 1)*60000;
+    $("pkCur").value = "";
+    pkClose(true);
+  } finally { $("pkOk").disabled = false; }
+}
+
+/* ---- 一覧 ---- */
+async function pwReload(){
+  PW_ALL = await getAll("passwords");
+  const hist = await getAll("pw_history");
+  const cnt = {};
+  hist.forEach(h => { cnt[h.pw_uid] = (cnt[h.pw_uid]||0) + 1; });
+  PW_ALL.forEach(r => { r.hist = cnt[r.uid] || 0; });
+}
+async function loadPw(){
+  await pwLoadKeys();
+  await pwReload();
+  const q = ($("pwQ").value||"").trim(), ql = q.toLowerCase();
+  PW_ROWS = PW_ALL.filter(r => !r.deleted && (!ql ||
+    ["title","account","site","memo"].some(k => String(r[k]||"").toLowerCase().indexOf(ql) >= 0)))
+    .sort((a,b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : (a.created_at < b.created_at ? -1 : 1)));
+  $("pwCount").textContent = num(PW_ROWS.length) + " 件";
+  $("pwNoKey").hidden = pwHasKey();
+  $("pwRows").innerHTML = PW_ROWS.map((d, i) => {
+    const site = /^https?:\/\//i.test(d.site||"")
+      ? '<button class="lnk" data-url="' + esc(d.site) + '">' + hi(d.site, q) + "</button>" : hi(d.site, q);
+    return '<div class="row">'
+      + '<div class="l1"><span class="sp"></span>'
+      + (d.pw_updated ? "<span>更新 " + esc(d.pw_updated.slice(0,16)) + "</span>" : "")
+      + (d.hist ? "<span>履歴 " + num(d.hist) + "</span>" : "") + "</div>"
+      + '<div class="w"><button class="lnk" data-pwedit="' + i + '">' + hi(d.title || "（見出しなし）", q) + "</button></div>"
+      + (d.account ? '<div class="mt">ユーザ名：' + hi(d.account, q) + "</div>" : "")
+      + (d.site ? '<div class="mt">サイト：' + site + "</div>" : "")
+      + '<div class="pw-line">'
+      + (d.pw_enc ? '<span class="pw-mask" id="pwm' + i + '">●●●●●●●●</span><span class="sp"></span>'
+          + '<button class="btn sm" data-pwshow="' + i + '">表示</button>'
+          + '<button class="btn sm" data-pwcopy="' + i + '">コピー</button>'
+        : '<span class="f" style="color:var(--sub);font-size:12px">（パスワード未登録）</span>')
+      + "</div></div>";
+  }).join("");
+  wireUrls($("pwRows"));
+  $("pwEmpty").hidden = PW_ROWS.length > 0;
+  $("pwEmpty").textContent = q ? "当てはまるものがありません。"
+    : "まだ1件もありません。［＋ 新しく登録］から入れるか、PC版の控えを合わせてください。";
+  pwLockSay();
+}
+async function pwCopy(text, what){
+  let done = false;
+  try { await navigator.clipboard.writeText(text); done = true; } catch(e){}
+  if(!done){
+    /* 暗号を解くのに時間がかかると、クリップボードの許可が切れる端末がある */
+    const t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    try { done = document.execCommand("copy"); } catch(e){}
+    document.body.removeChild(t);
+  }
+  toast(done ? (what||"") + "コピーしました" : "コピーできませんでした（［表示］して長押しで選んでください）", 3500);
+}
+async function pwReveal(m, btn, enc){
+  if(m.classList.contains("shown")){
+    m.textContent = "●●●●●●●●"; m.classList.remove("shown"); btn.textContent = "表示"; return; }
+  const k = await pwPriv(); if(!k) return;
+  try { m.textContent = await pwDecrypt(k, enc); }
+  catch(e){ toast("このパスワードは戻せません（別の鍵で暗号化されたものかもしれません）", 6000); return; }
+  m.classList.add("shown"); btn.textContent = "隠す";
+}
+async function pwCopyEnc(enc){
+  const k = await pwPriv(); if(!k) return;
+  let t; try { t = await pwDecrypt(k, enc); }
+  catch(e){ toast("このパスワードは戻せません", 6000); return; }
+  await pwCopy(t, "パスワードを");
+}
+
+/* ---- 1件の窓 ---- */
+async function pwOpen(i){
+  PW_CUR = (i == null) ? null : PW_ROWS[i];
+  const d = PW_CUR || {};
+  $("pwTitleH").textContent = PW_CUR ? "パスワードを直す" : "パスワードを登録";
+  $("pwTitle").value = d.title||""; $("pwAcc").value = d.account||"";
+  $("pwSite").value = d.site||""; $("pwMemo").value = d.memo||"";
+  $("pwPass").value = ""; $("pwPass").type = "password"; $("pwPassEye").textContent = "見る";
+  const has = !!(PW_CUR && PW_CUR.pw_enc);
+  $("pwPassLab").textContent = has ? "新しいパスワード" : "パスワード";
+  $("pwPass").placeholder = has ? "変えるときだけ入れてください（空のままなら今のまま）" : "";
+  $("pwNowRow").hidden = !has;
+  $("pwNow").textContent = "●●●●●●●●"; $("pwNow").classList.remove("shown");
+  $("pwNowShow").textContent = "表示";
+  $("pwUpd").textContent = has && d.pw_updated ? "更新日 " + d.pw_updated.slice(0,16) : "";
+  $("pwDelOne").hidden = !PW_CUR;
+  $("pwMsgs").innerHTML = "";
+  PW_HIST = [];
+  if(PW_CUR){
+    PW_HIST = (await getAll("pw_history")).filter(h => h.pw_uid === PW_CUR.uid)
+      .sort((a,b) => (a.changed_at < b.changed_at ? 1 : a.changed_at > b.changed_at ? -1 : 0));
+  }
+  $("pwHistBox").hidden = !PW_HIST.length;
+  $("pwHist").innerHTML = PW_HIST.map((h, j) => '<div class="hrow">'
+    + '<div class="hat">' + esc((h.set_at||"（不明）").slice(0,16)) + " ～ " + esc((h.changed_at||"").slice(0,16)) + "</div>"
+    + '<div class="pw-line"><span class="pw-mask" id="pwh' + j + '">●●●●●●●●</span><span class="sp"></span>'
+    + '<button class="btn sm" data-hshow="' + j + '">表示</button>'
+    + '<button class="btn sm" data-hcopy="' + j + '">コピー</button></div></div>').join("");
+  $("mPw").classList.add("on");
+}
+function pwClose(){ $("mPw").classList.remove("on"); }
+async function pwSave(){
+  const t = $("pwTitle").value.trim();
+  if(!t){ $("pwMsgs").innerHTML = msgHtml("見出しを入れてください"); return; }
+  const np = $("pwPass").value;
+  await pwLoadKeys();
+  if(np && !pwHasKey()){
+    $("pwMsgs").innerHTML = msgHtml("この端末には鍵がないので、パスワードをしまえません。"
+      + "PC版の控えを［④入出力］→［パスワードを合わせる］で取り込んでください。"
+      + "（見出し・ユーザ名・メモだけなら、パスワードを空にすれば保存できます）");
+    return;
+  }
+  const tm = now();
+  const enc = np ? await pwEncrypt(np) : "";     // しまうだけなのでマスターパスワードは聞かない
+  const vals = {title:t, account:$("pwAcc").value.trim(), site:$("pwSite").value.trim(),
+                memo:$("pwMemo").value.replace(/\r\n/g, "\n")};
+  let rec, what;
+  if(PW_CUR){
+    rec = await getRec("passwords", PW_CUR.uid);
+    if(!rec || rec.deleted){ $("pwMsgs").innerHTML = msgHtml("見つかりません（消されたかもしれません）"); return; }
+    if(np){
+      if(rec.pw_enc)
+        await putRec("pw_history", {uid:newUid(), pw_uid:rec.uid, pw_enc:rec.pw_enc,
+                                    set_at:rec.pw_updated||"", changed_at:tm});
+      rec.pw_enc = enc; rec.pw_updated = tm;
+    }
+    what = "更新";
+  } else {
+    rec = {uid:newUid(), pw_enc:enc, pw_updated:(enc ? tm : ""), created_at:tm, deleted:0};
+    what = "追加";
+  }
+  Object.assign(rec, vals, {updated_at:tm});
+  delete rec.hist;
+  await putRec("passwords", rec);
+  $("pwPass").value = "";
+  pwClose(); toast(what + "しました");
+  await loadPw();
+}
+async function pwDelete(){
+  if(!PW_CUR) return;
+  if(!confirm("「" + (PW_CUR.title||"") + "」を消します（履歴もいっしょに消えます）。よろしいですか？\n"
+            + "PC版と合わせると、PC版のほうでも消えます。")) return;
+  const rec = await getRec("passwords", PW_CUR.uid); if(!rec) return;
+  /* 行は消さずに「消した印」だけ残す（PC版と合わせたとき、相手側でも消えるように） */
+  Object.assign(rec, {deleted:1, title:"", account:"", site:"", memo:"", pw_enc:"", updated_at:now()});
+  delete rec.hist;
+  await putRec("passwords", rec);
+  const hs = (await getAll("pw_history")).filter(h => h.pw_uid === rec.uid).map(h => h.uid);
+  await delMany("pw_history", hs);
+  pwClose(); toast("消しました"); await loadPw();
+}
+
+/* ---- 受け渡し（PC版 pw_doc／pw_merge と同じ形・同じ規則） ---- */
+async function pwDoc(){
+  const pws = (await getAll("passwords")).map(r => {
+    const d = {}; PW_FIELDS.forEach(k => d[k] = r[k] || "");
+    return Object.assign(d, {uid:r.uid, deleted:r.deleted ? 1 : 0,
+                             created_at:r.created_at||"", updated_at:r.updated_at||""});
+  });
+  const alive = {}; pws.forEach(r => alive[r.uid] = 1);
+  const hist = (await getAll("pw_history")).filter(h => alive[h.pw_uid])
+    .map(h => ({uid:h.uid, pw_uid:h.pw_uid, pw_enc:h.pw_enc||"", set_at:h.set_at||"", changed_at:h.changed_at||""}));
+  const ks = (await getMeta("pw_keys", null)) || {};
+  const keys = {}; PW_KEYS.forEach(k => keys[k] = String(ks[k] == null ? "" : ks[k]));
+  keys.pw_key_at = ks.pw_key_at || "";
+  return {pw_keys:keys, passwords:pws, pw_history:hist};
+}
+async function pwMerge(doc){
+  const res = {ok:true, add:0, upd:0, dele:0, hist:0, keys:"same", message:""};
+  if(!doc || !("passwords" in doc)){ res.keys = "none"; return res; }
+  const src = doc.pw_keys || {};
+  const ks = {}; PW_KEYS.forEach(k => { if(k in src) ks[k] = String(src[k] == null ? "" : src[k]); });
+  const at = String(src.pw_key_at || "");
+  const mine = (await getMeta("pw_keys", null)) || {};
+  if(ks.pw_pub){
+    if(!mine.pw_pub){
+      await setMeta("pw_keys", Object.assign({}, ks, {pw_key_at: at || now()}));
+      res.keys = "taken";
+    } else if(mine.pw_pub !== ks.pw_pub){
+      res.ok = false; res.keys = "differ";
+      res.message = "パスワードは合わせませんでした（控えは別のマスターパスワードの鍵で作られています。"
+                  + "同じ台帳から書き出した控えを使ってください）";
+      return res;
+    } else if(at && at > (mine.pw_key_at || "") && ks.pw_priv && ks.pw_priv !== mine.pw_priv){
+      /* 同じ鍵の対。PC でマスターパスワードを変えたあとなら、その包みに揃える */
+      await setMeta("pw_keys", Object.assign({}, mine,
+        {pw_salt:ks.pw_salt||"", pw_iter:ks.pw_iter||"", pw_priv:ks.pw_priv, pw_key_at:at}));
+      res.keys = "rewrapped";
+      PW_PRIV = null; PW_UNTIL = 0;
+    }
+  }
+  const tNow = now();
+  const have = {}; (await getAll("passwords")).forEach(r => have[r.uid] = r);
+  const put = [], killHist = {};
+  (doc.passwords || []).forEach(r => {
+    let uid = String(r.uid || "");
+    const vals = {}; PW_FIELDS.forEach(k => vals[k] = String(r[k] == null ? "" : r[k]));
+    const dele = parseInt(r.deleted, 10) ? 1 : 0;
+    const updAt = String(r.updated_at || tNow);
+    let cur = null;
+    if(uid) cur = have[uid] || null;
+    else {
+      /* v1.7.0 の控え（uid が無い）。見出し・ユーザ名・サイトが同じものを同じ1件とみなす */
+      uid = newUid();
+      cur = Object.values(have).find(x => !x.deleted && x.title === vals.title
+              && x.account === vals.account && x.site === vals.site) || null;
+    }
+    if(!cur){
+      const rec = Object.assign({uid:uid}, vals,
+        {created_at:String(r.created_at || tNow), updated_at:updAt, deleted:dele});
+      have[uid] = rec; put.push(rec);
+      if(!dele) res.add++;
+      return;
+    }
+    if(updAt <= (cur.updated_at || "")) return;          // 手元のほうが新しい（か同じ）
+    const was = cur.deleted;
+    Object.assign(cur, vals, {updated_at:updAt, deleted:dele});
+    delete cur.hist;
+    put.push(cur);
+    if(dele && !was){ killHist[cur.uid] = 1; res.dele++; }
+    else if(!dele) res.upd++;
+  });
+  await putMany("passwords", put);
+  const hs = await getAll("pw_history");
+  const gone = hs.filter(h => killHist[h.pw_uid]).map(h => h.uid);
+  await delMany("pw_history", gone);
+  const hHave = {}; hs.forEach(h => { if(!killHist[h.pw_uid]) hHave[h.uid] = 1; });
+  const hPut = [];
+  (doc.pw_history || []).forEach(h => {
+    const hu = String(h.uid || ""), parent = have[String(h.pw_uid || "")];
+    if(!hu || hHave[hu] || !parent || parent.deleted) return;
+    hPut.push({uid:hu, pw_uid:parent.uid, pw_enc:String(h.pw_enc||""),
+               set_at:String(h.set_at||""), changed_at:String(h.changed_at||"")});
+    hHave[hu] = 1; res.hist++;
+  });
+  await putMany("pw_history", hPut);
+  res.message = "パスワード：足した " + res.add + " ／ 新しくした " + res.upd + " ／ 消した "
+              + res.dele + " ／ 履歴を足した " + res.hist
+              + (res.keys === "taken" ? "（鍵を受け取りました）"
+                 : res.keys === "rewrapped" ? "（PC で変えたマスターパスワードに揃えました）" : "");
+  return res;
+}
+async function pwExport(){
+  const doc = Object.assign({app:"用語辞書", format:1, kind:"passwords", version:APP_VERSION,
+                             from:"android", exported_at:now()}, await pwDoc());
+  const n = doc.passwords.filter(r => !r.deleted).length;
+  download("用語辞書_パスワード_" + stamp() + ".json", JSON.stringify(doc), "application/json");
+  $("pwIoMsgs").innerHTML = msgHtml("パスワード " + n + " 件（暗号文のまま）を書き出しました", "ok");
+}
+function pwPickFile(){
+  const inp = $("pwPick"); inp.value = "";
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0]; if(!f) return;
+    const d = decodeBytes(await f.arrayBuffer());
+    let doc = null; try { doc = JSON.parse(d.text); } catch(e){ doc = null; }
+    if(!doc || typeof doc !== "object" || !("passwords" in doc)){
+      $("pwIoMsgs").innerHTML = msgHtml("この控えにはパスワードが入っていません：" + f.name); return;
+    }
+    busy(true, "合わせています…");
+    let r;
+    try { r = await pwMerge(doc); }
+    catch(e){ busy(false); $("pwIoMsgs").innerHTML = msgHtml("合わせられませんでした：" + (e && e.message || e)); return; }
+    busy(false);
+    $("pwIoMsgs").innerHTML = msgHtml(r.ok ? "合わせました（" + r.message + "）：" + f.name : r.message,
+                                      r.ok ? "ok" : "error");
+    toast(r.ok ? "合わせました" : "合わせませんでした", 3500);
+    await loadPw(); drawIoStat();
+  };
+  inp.click();
+}
+
 /* ---------------- 設定（⚙） ---------------- */
 function openCfgDlg(){
   dlg("設定",
@@ -1410,6 +1933,10 @@ function openCfgDlg(){
       + '<input id="cfgPre" type="text" maxlength="4" value="' + esc(CFG.reg_no_prefix||"Y") + '">'
       + '<div class="hint">この端末で新しく登録したものに付きます（例 Y00123）。'
       + "PC版の設定と合わせてください。</div></div>"
+    + '<div><label class="k">パスワードを見たあと鍵を開けておく分数</label>'
+      + '<input id="cfgPwMin" type="number" min="0" max="120" inputmode="numeric" value="'
+      + pwMin() + '">'
+      + '<div class="hint">PC版の ini の pw_lock_min と同じ意味です。<b>0 なら見るたびに聞きます。</b></div></div>'
     + "</div>"
     + '<div class="sec">この端末</div>'
     + '<div class="kv" id="cfgStat">' + backupText() + "<br>" + persistText() + "</div>",
@@ -1419,6 +1946,8 @@ function openCfgDlg(){
         CFG.body_head = parseInt($("cfgHead").value,10) || 120;
         CFG.image_max_px = Math.max(0, parseInt($("cfgPx").value,10) || 0);
         CFG.reg_no_prefix = ($("cfgPre").value || "Y").trim() || "Y";
+        const pm = parseInt($("cfgPwMin").value, 10);
+        CFG.pw_lock_min = isNaN(pm) ? 10 : Math.max(0, Math.min(120, pm));
         await setMeta("cfg", CFG);
         closeDlg(); loadList(); toast("保存しました");
      }}]);
@@ -1431,6 +1960,7 @@ async function boot(){
   CFG = Object.assign({}, DEF_CFG, await getMeta("cfg", {}));
   lastBackup = await getMeta("last_backup", "") || "";
   await reloadAll();
+  await pwLoadKeys(); await pwReload();
   loadList();
   newEdit(true);
 
@@ -1526,6 +2056,42 @@ async function boot(){
         : persistState === false ? "まだ通りませんでした。使い続けると通ることがあります"
         : "この端末では調べられませんでした", 5000);
   };
+
+  /* ⑤パスワード（v1.2.0） */
+  $("pwQ").oninput = debounce(loadPw);
+  $("bPwNew").onclick = () => pwOpen(null);
+  $("bPwLock").onclick = () => pwLock();
+  $("pwRows").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    if(b.dataset.pwedit != null) pwOpen(+b.dataset.pwedit);
+    else if(b.dataset.pwshow != null) pwReveal($("pwm" + b.dataset.pwshow), b, PW_ROWS[+b.dataset.pwshow].pw_enc);
+    else if(b.dataset.pwcopy != null) pwCopyEnc(PW_ROWS[+b.dataset.pwcopy].pw_enc);
+  });
+  $("pwHist").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    if(b.dataset.hcopy != null) pwCopyEnc(PW_HIST[+b.dataset.hcopy].pw_enc);
+    else if(b.dataset.hshow != null) pwReveal($("pwh" + b.dataset.hshow), b, PW_HIST[+b.dataset.hshow].pw_enc);
+  });
+  $("pwNowShow").onclick = () => PW_CUR && pwReveal($("pwNow"), $("pwNowShow"), PW_CUR.pw_enc);
+  $("pwNowCopy").onclick = () => PW_CUR && pwCopyEnc(PW_CUR.pw_enc);
+  $("pwAccCopy").onclick = () => { const v = $("pwAcc").value; if(v) pwCopy(v, "ユーザ名を"); };
+  $("pwPassEye").onclick = () => { const p = $("pwPass"), show = p.type === "password";
+    p.type = show ? "text" : "password"; $("pwPassEye").textContent = show ? "隠す" : "見る"; };
+  $("pwSave").onclick = pwSave;
+  $("pwDelOne").onclick = pwDelete;
+  $("pwCancel").onclick = pwClose;
+  $("pwX").onclick = pwClose;
+  $("pkOk").onclick = pkOk;
+  $("pkCancel").onclick = () => pkClose(false);
+  $("pkCur").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); pkOk(); } });
+  $("bPwExp").onclick = pwExport;
+  $("bPwImp").onclick = pwPickFile;
+  /* 表示したものは、時間が来たら伏せ字に戻して鍵をかける */
+  setInterval(() => { if(PW_PRIV && Date.now() > PW_UNTIL) pwLock(true); else pwLockSay(); }, 5000);
+  /* 裏へ回ったら（ほかのアプリへ切り替えた・画面を消した）見えている文字は伏せる */
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState === "hidden") pwMaskAll();
+  });
 
   /* お知らせの帯 */
   $("updGo").onclick = doUpdate;
