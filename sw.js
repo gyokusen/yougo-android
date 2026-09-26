@@ -1,4 +1,4 @@
-/* 用語辞書 スマホ版 — オフラインでも動くようにするための入れ物。
+/* なんでもメモ スマホ版 — オフラインでも動くようにするための入れ物。
    版を上げたいときは CACHE の名前だけ変える（例 ygo-v1 → ygo-v2）。
    古い入れ物は activate のときに片づける。
 
@@ -15,7 +15,7 @@ const FILES = [
   "./icon/icon-maskable-512.png"
 ];
 /* データ（控えJSON・CSV）はここに入れない。そもそも置き場に上げない。
-   用語辞書の中身は業務の知識なので、public な GitHub Pages には載せず、
+   なんでもメモの中身は業務の知識なので、public な GitHub Pages には載せず、
    端末へ手渡しで取り込む（GitHubPagesへの置き方.md を見ること）。 */
 
 self.addEventListener("install", (e) => {

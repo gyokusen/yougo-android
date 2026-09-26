@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon/icon-192.png">
 <link rel="apple-touch-icon" href="icon/icon-192.png">
-<title>用語辞書</title>
+<title>なんでもメモ</title>
 <style>
 :root{
   --bg:#F6F1E4; --panel:#FBF8F0; --line:#D8CFB8; --line2:#EAE2CD;
@@ -246,7 +246,7 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
 <body>
 
 <header>
-  <div class="brand">用語辞書<span class="ver" id="ver"></span></div>
+  <div class="brand">なんでもメモ<span class="ver" id="ver"></span></div>
   <div class="chips">
     <span class="chip">事項<b id="chipEntries">0</b></span>
     <span class="chip">ジャンル<b id="chipGenres">0</b></span>
@@ -539,7 +539,7 @@ mark{background:#FBEAA8; color:inherit; border-radius:2px}
 
 <script>
 "use strict";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 /* ★ IndexedDB は gyokusen.github.io という**オリジン単位**で分かれ、
      URL の下の階層（/yougo-android/）では分かれない。
      同じ github.io に置く別アプリとは必ず別の名前にすること。
@@ -1257,7 +1257,7 @@ function holdJson(name, text){
   if(!doc || !doc.entries){
     JSONDOC = null; JSONNAME = "";
     $("jsonPicked").textContent = "（まだ選んでいません）";
-    $("jsonMsgs").innerHTML = msgHtml("用語辞書の控えではないようです：" + name);
+    $("jsonMsgs").innerHTML = msgHtml("なんでもメモの控えではないようです：" + name);
     return;
   }
   JSONDOC = doc; JSONNAME = name;
@@ -1316,7 +1316,7 @@ async function importJson(){
 }
 function buildJson(){
   return {
-    app:"用語辞書", format:1, version:APP_VERSION, from:"android",
+    app:"なんでもメモ", format:1, version:APP_VERSION, from:"android",
     exported_at:now(),
     genres:GENRES.map(g => Object.assign({}, g)),
     templates:TMPLS.map(t => { const x = Object.assign({}, t); delete x.id; return x; }),
@@ -1333,7 +1333,7 @@ async function exportJson(){
     doc.images = imgs.map(im => ({id:im.id, name:im.name, mime:im.mime, b64:im.b64}));
     Object.assign(doc, await pwDoc());     // ⑤パスワード（暗号文のまま。v1.2.0）
   } finally { busy(false); }
-  download("用語辞書_控え_" + stamp() + ".json", JSON.stringify(doc), "application/json");
+  download("なんでもメモ_控え_" + stamp() + ".json", JSON.stringify(doc), "application/json");
   lastBackup = now();
   await setMeta("last_backup", lastBackup);
   $("bk").classList.remove("on");
@@ -1885,10 +1885,10 @@ async function pwMerge(doc){
   return res;
 }
 async function pwExport(){
-  const doc = Object.assign({app:"用語辞書", format:1, kind:"passwords", version:APP_VERSION,
+  const doc = Object.assign({app:"なんでもメモ", format:1, kind:"passwords", version:APP_VERSION,
                              from:"android", exported_at:now()}, await pwDoc());
   const n = doc.passwords.filter(r => !r.deleted).length;
-  download("用語辞書_パスワード_" + stamp() + ".json", JSON.stringify(doc), "application/json");
+  download("なんでもメモ_パスワード_" + stamp() + ".json", JSON.stringify(doc), "application/json");
   $("pwIoMsgs").innerHTML = msgHtml("パスワード " + n + " 件（暗号文のまま）を書き出しました", "ok");
 }
 function pwPickFile(){
